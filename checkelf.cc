@@ -5,7 +5,7 @@ bool parse_sym_table(elf::elf64_shdr *symtab, elf::elf64_shdr *strtab, FILE *elf
     // ... if binary is stripped program can't find exported function for checking stack canary... if you have idea around this, pls open pull request!!!
     
     if (!symtab || !strtab) {
-        fprintf(stderr, "Error: Symbol table or string table is NULL OR STRIPPED\n");
+        fprintf(stderr, "ITS PROBABLY STRIPPED BINARY!\n");
         return false;
     }
 
