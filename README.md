@@ -4,7 +4,7 @@
 <p>"Check it" is supposed to be tool for checking which exploit mitigations are enabled in a binary. Currently its WIP.</p>
 
 ## Todo
-1. add support for elf 32 bit and stack cookie...
+1. add support for elf 32 bit...
 
 ## Compiling
 ```

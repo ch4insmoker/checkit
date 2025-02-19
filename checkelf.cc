@@ -1,41 +1,71 @@
 #include "checkelf.h"
-#include <stdio.h>
 
 
-// void parse_sym_table(unsigned long long sym_off, unsigned long long str_off, unsigned long long sz, FILE *elf) {
-//     for (size_t j = 0; j * sizeof(elf::elf64_sym) < sz; j++) {
-//         elf::elf64_sym sym;
-//         fseek(elf, sym_off + j * sizeof(elf::elf64_sym), SEEK_SET);
-//         fread(&sym, sizeof(elf::elf64_sym), 1, elf);
+bool parse_sym_table(elf::elf64_shdr *symtab, elf::elf64_shdr *strtab, FILE *elf) {
+    // ... if binary is stripped program can't find exported function for checking stack canary... if you have idea around this, pls open pull request!!!
+    
+    if (!symtab || !strtab) {
+        fprintf(stderr, "Error: Symbol table or string table is NULL OR STRIPPED\n");
+        return false;
+    }
 
-//         if (sym.st_name != 0) {
-//             char str_sym[256];
-//             fseek(elf, str_off + sym.st_name, SEEK_SET);
-//             fread(&str_sym, 1, 256, elf);
-//             std::cout << str_sym;
-//         }
-//   }
-// }
+    size_t num_of_symbols = symtab->sh_size / symtab->sh_entsize;
+    elf::elf64_sym *symtabx = (elf::elf64_sym *)malloc(symtab->sh_size);
 
-// void stk_cookie(elf::elf64_hdr header, FILE *elf) {
-//     elf::elf64_shdr *sections = (elf::elf64_shdr *)malloc(header.e_shnum * header.e_shentsize);
+    fseek(elf, symtab->sh_offset, SEEK_SET);
+    fread(symtabx, symtab->sh_size, 1, elf);
 
-//     unsigned long long str_off, sz, sym_off;
+    char *symstrtab = (char *)malloc(strtab->sh_size);
 
-//     for (int i = 0; i < header.e_shnum; i++) {
-//         fseek(elf, header.e_shentsize * i + header.e_shoff, SEEK_SET);
-//         fread(&sections[i], sizeof(elf::elf64_shdr), 1, elf);
-//         if (sections[i].sh_type == SHT_SYMTAB) {
-//             sz = sections[i].sh_size;
-//             sym_off = sections[i].sh_offset;
-//         }
-//         if (sections[i].sh_type == SHT_STRTAB) {
-//             str_off = sections[i].sh_offset;
-//         }
-//     }
+    fseek(elf, strtab->sh_offset, SEEK_SET);
+    fread(symstrtab, strtab->sh_size, 1, elf);
 
-//     parse_sym_table(sym_off, str_off,  sz, elf);
-// }
+    for (size_t i = 0; i < num_of_symbols; i++) {
+        std::string func = symstrtab + symtabx[i].st_name;
+        if (func.contains("__stack_chk_fail")) {
+            return true;
+        }
+    }
+
+    free(symtabx);
+    free(symstrtab);
+
+    return false;
+}
+
+bool stk_cookie(elf::elf64_hdr header, FILE *elf) {
+    elf::elf64_shdr *sections = (elf::elf64_shdr *)malloc(header.e_shnum * header.e_shentsize);
+
+    elf::elf64_shdr *symtab = NULL;
+    elf::elf64_shdr *strtab = NULL;
+
+    for (int i = 0; i < header.e_shnum; i++) {
+        fseek(elf, (header.e_shoff + (i * header.e_shentsize)), SEEK_SET);
+        fread(&sections[i], sizeof(elf::elf64_shdr), 1, elf);
+
+        if (sections[i].sh_type == SHT_SYMTAB) {
+            symtab = &sections[i];
+            break;
+        }
+    }
+
+    if (symtab != NULL) {
+        for (int i = 0; i < header.e_shnum; i++) {
+            fseek(elf, (header.e_shoff + (i * header.e_shentsize)), SEEK_SET);
+            fread(&sections[i], sizeof(elf::elf64_shdr), 1, elf) != 1;
+ 
+            if (symtab->sh_link == i) {
+              strtab = &sections[i];
+              break;
+            }
+        }
+    }
+
+    bool f = parse_sym_table(symtab, strtab, elf);
+    free(sections);
+
+    return f;
+}
 
 bool full_relro(elf::elf64_phdr phdr, FILE *elf) {
 
@@ -109,9 +139,11 @@ void checkelf(FILE *fp) {
         if(full_relro(phdr,fp)) {full_relro_ = 2;}
     }
 
-    stk_cookie(header, fp);
+    if (stk_cookie(header, fp)) {
+        canary_ = "Enabled";
+    }
 
-    std::string relrox = ((full_relro_ == 2 && relro_ == 1) ? "Full" : relro_ == 1 ? "Partial" : "No Relro");
+    std::string relrox = ((full_relro_ == 2 && relro_ == 1) ? "Full" : relro_ == 1 ? "Partial" : "No Relro");   
 
     std::cout << "NX    : " << nx_ << std::endl;
     std::cout << "PIE   : " << pie_ << std::endl;
