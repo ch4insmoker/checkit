@@ -26,6 +26,7 @@ win::load_config_directory_x64_t *get_load_conf_64(FILE *fp, win::optional_heade
     fseek(fp, off, SEEK_SET);
 
     fread(LOAD_CONF_DIR, sizeof(win::load_config_directory_x64_t), 1, fp);
+    free(sections);
     return LOAD_CONF_DIR;
 }
 
@@ -45,6 +46,7 @@ win::load_config_directory_x86_t *get_load_conf_32(FILE *fp, win::optional_heade
     fseek(fp, off, SEEK_SET);
 
     fread(LOAD_CONF_DIR, sizeof(win::load_config_directory_x86_t), 1, fp);
+    free(sections);
     return LOAD_CONF_DIR;
 }
 
@@ -142,6 +144,8 @@ void checkpe(FILE *fp) {
         dll_chars = OPT_HDR->characteristics.flags;
         cookie = check_cookie_64(LOAD_CONFIG);
         safe_seh = false;
+        free(OPT_HDR);
+        free(LOAD_CONFIG);
     } else if (pe_version == 1) {
         // FOR 32-BIT BINARY
 
@@ -156,6 +160,8 @@ void checkpe(FILE *fp) {
         dll_chars = OPT_HDR->characteristics.flags;
         cookie = check_cookie_32(LOAD_CONFIG);
         safe_seh = check_safe_seh(LOAD_CONFIG);
+        free(OPT_HDR);
+        free(LOAD_CONFIG);
     } else {
         puts("Failed while parsing");
         exit(0);
