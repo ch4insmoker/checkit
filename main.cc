@@ -1,10 +1,6 @@
 #include "checkelf.h"
 #include "checkpe.h"
 
-
-// TODO:
-// Stack canaries
-
 int main(int argc, char **argv) {
     
     FILE *fp;
@@ -17,7 +13,7 @@ int main(int argc, char **argv) {
     fread(&sig, 4, 1, fp);
     if ((uint16_t)sig == chk_IMAGE_DOS_SIGNATURE) {
         checkpe(fp);
-    } else if (sig == 0x464c457f){
+    } else if (sig == 0x464c457f || sig == 0x7f454c46) {
         checkelf(fp);
     } else {
         fputs("invalid file format!\n", stderr);
