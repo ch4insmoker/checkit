@@ -55,8 +55,8 @@ bool stk_cookie(elf::elf64_hdr header, FILE *elf) {
             fread(&sections[i], sizeof(elf::elf64_shdr), 1, elf) != 1;
  
             if (symtab->sh_link == i) {
-              strtab = &sections[i];
-              break;
+                strtab = &sections[i];
+                break;
             }
         }
     }

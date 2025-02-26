@@ -86,19 +86,11 @@ bool check_dynamic_base(uint16_t dll_chars) {
     return dll_chars & IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE;
 }
 
-// bool check_aslr(uint16_t dll_chars) {
-//     return check_high_entropy_va(OPT_HDR) & check_dynamic_base(OPT_HDR);
-// }
-
 bool check_nx(uint16_t dll_chars) {
     return dll_chars & IMAGE_DLLCHARACTERISTICS_NX_COMPAT;
 }
 
-bool check_cookie_64(win::load_config_directory_x64_t *LOAD_CONF_DIR) {
-    return LOAD_CONF_DIR->security_cookie != 0;
-}
-
-bool check_cookie_32(win::load_config_directory_x86_t *LOAD_CONF_DIR) {
+template <typename T> bool check_cookie(T *LOAD_CONF_DIR) {
     return LOAD_CONF_DIR->security_cookie != 0;
 }
 
@@ -142,7 +134,7 @@ void checkpe(FILE *fp) {
         win::load_config_directory_x64_t *LOAD_CONFIG = get_load_conf_64(fp, OPT_HDR, NT_HDR.file_header.num_sections, DOS_HDR.e_lfanew);
 
         dll_chars = OPT_HDR->characteristics.flags;
-        cookie = check_cookie_64(LOAD_CONFIG);
+        cookie = check_cookie(LOAD_CONFIG);
         safe_seh = false;
         free(OPT_HDR);
         free(LOAD_CONFIG);
@@ -158,13 +150,13 @@ void checkpe(FILE *fp) {
         win::load_config_directory_x86_t *LOAD_CONFIG = get_load_conf_32(fp, OPT_HDR, NT_HDR.file_header.num_sections, DOS_HDR.e_lfanew);
         
         dll_chars = OPT_HDR->characteristics.flags;
-        cookie = check_cookie_32(LOAD_CONFIG);
+        cookie = check_cookie(LOAD_CONFIG);
         safe_seh = check_safe_seh(LOAD_CONFIG);
         free(OPT_HDR);
         free(LOAD_CONFIG);
     } else {
         puts("Failed while parsing");
-        exit(0);
+        exit(-1);
     }
 
     std::cout << "stack cookie   : " << (cookie ? "Enabled": "Disabled") << std::endl;
