@@ -8,7 +8,7 @@ endif ()
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 
-add_executable(check_it checkpe.cc main.cc checkelf.cc)
+add_executable(check_it src/checkpe.cc src/main.cc src/checkelf.cc)
 
 target_include_directories(check_it PUBLIC
                            "${PROJECT_BINARY_DIR}"
